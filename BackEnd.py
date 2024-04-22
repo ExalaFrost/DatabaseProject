@@ -10,6 +10,8 @@ if not os.path.exists(log_directory):
 log_file_path = os.path.join(log_directory, 'app.log')
 
 logging.basicConfig(filename=log_file_path, level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
+
 def connect_to_mysql():
     try:
         connection = mysql.connector.connect(
@@ -24,11 +26,11 @@ def connect_to_mysql():
 
 def create_database(cursor, db_name):
     try:
-        # Use backticks around the database name to handle special characters or numeric names
+
         cursor.execute(f"CREATE DATABASE `{db_name}`")
         return f"Database {db_name} created successfully."
     except mysql.connector.Error as err:
-        if "1007" in str(err):  # Error code 1007: Can't create database; database exists
+        if "1007" in str(err):
             return f"Database {db_name} already exists."
         return f"Failed creating database {db_name}: {err}"
 
@@ -44,9 +46,9 @@ def create_table(cursor, db_name, table_name, columns, valid_data_types):
         create_column_statements = []
         foreign_key_statements = []
         for column_name, (data_type, pk, fk, ref_table, ref_column) in columns.items():
-            # Check and append default length for VARCHAR if missing
+
             if "varchar" in data_type.lower() and not data_type.lower().endswith(')'):
-                data_type += "(255)"  # Default length
+                data_type += "(255)"
 
             if data_type.lower() not in valid_data_types_set:
                 return f"Invalid data type '{data_type}' provided for column '{column_name}'. Valid types are: {valid_data_types}"
@@ -59,7 +61,7 @@ def create_table(cursor, db_name, table_name, columns, valid_data_types):
             if fk.lower() == 'yes':
                 if not ref_table or not ref_column:
                     return f"Missing reference table or column for foreign key on '{column_name}'."
-                # Check if the referenced table and column exist
+
                 cursor.execute(
                     f"SELECT * FROM information_schema.tables WHERE table_schema = '{db_name}' AND table_name = '{ref_table}'")
                 if cursor.fetchone() is None:
@@ -80,7 +82,6 @@ def create_table(cursor, db_name, table_name, columns, valid_data_types):
             table_definition += ", " + ", ".join(foreign_key_statements)
         table_definition += ")"
 
-        # Debug: Print the SQL query to check its correctness
         print("Executing SQL:", table_definition)
 
         cursor.execute(table_definition)
@@ -93,14 +94,13 @@ def create_table(cursor, db_name, table_name, columns, valid_data_types):
 
 
 def process_json_files(directory, db_name):
-    # Define the list of valid data types
     valid_data_types = ["int", "tinyint", "smallint", "mediumint", "bigint", "decimal", "float", "double",
-                                 "bit", "char", "varchar","varchar(255)", "binary", "varbinary", "tinyblob", "blob", "mediumblob",
-                                 "longblob", "tinytext", "text", "mediumtext", "longtext", "enum", "set", "date",
-                                 "datetime", "time", "timestamp", "year"]
+                        "bit", "char", "varchar", "varchar(255)", "binary", "varbinary", "tinyblob", "blob",
+                        "mediumblob",
+                        "longblob", "tinytext", "text", "mediumtext", "longtext", "enum", "set", "date",
+                        "datetime", "time", "timestamp", "year"]
 
     try:
-        # Attempt to connect to MySQL
         connection, message = connect_to_mysql()
         logging.info(message)
         if connection is None:
@@ -108,7 +108,6 @@ def process_json_files(directory, db_name):
             return message
 
         cursor = connection.cursor()
-        # Attempt to create the database
         status_message = create_database(cursor, db_name)
         logging.info(status_message)
         if "already exists" in status_message:
@@ -118,20 +117,17 @@ def process_json_files(directory, db_name):
             return status_message
 
         status_messages = [status_message]
-        # List and sort JSON files
         files = sorted([f for f in os.listdir(directory) if f.startswith("Database") and f.endswith(".json")])
 
         if files:
-            latest_file = files[-1]  # Select the last file which is the latest
+            latest_file = files[-1]
             with open(os.path.join(directory, latest_file), 'r') as f:
                 data = json.load(f)
                 for table_name, columns in data.items():
-                    # Attempt to create each table
                     table_status = create_table(cursor, db_name, table_name, columns, valid_data_types)
                     status_messages.append(table_status)
                     logging.info(f"Processed table {table_name}: {table_status}")
 
-        # Close cursor and connection
         cursor.close()
         connection.close()
         final_status = "\n".join(status_messages)

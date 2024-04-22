@@ -5,16 +5,16 @@ import os
 import logging
 import mysql
 
-from BackEnd import process_json_files  # Import the function directly
+from BackEnd import process_json_files
 
 
 class DatabaseSchemaApp:
     def __init__(self, root):
         self.root = root
-        self.root.withdraw()  # Hide the main window
+        self.root.withdraw()
         self.db_connection = self.connect_to_mysql()
         self.log_directory = "D:/Database_Project_file_dump"
-        self.app_running = True  # Flag to control the running of the app
+        self.app_running = True
         self.valid_data_types = ["int", "tinyint", "smallint", "mediumint", "bigint", "decimal", "float", "double",
                                  "bit", "char", "varchar","varchar(255)", "binary", "varbinary", "tinyblob", "blob", "mediumblob",
                                  "longblob", "tinytext", "text", "mediumtext", "longtext", "enum", "set", "date",
@@ -43,17 +43,17 @@ class DatabaseSchemaApp:
 
     def check_database_exists(self, db_name):
         try:
-            cursor = self.db_connection.cursor(buffered=True)  # Use a buffered cursor
+            cursor = self.db_connection.cursor(buffered=True)
             cursor.execute("SHOW DATABASES")
-            databases = cursor.fetchall()  # Fetch all results to ensure they are consumed
+            databases = cursor.fetchall()
             exists = any(db_name == db[0] for db in databases)
             cursor.close()
             return exists
         except mysql.connector.Error as err:
             logging.error(f"Error checking if database exists: {err}")
             messagebox.showerror("Error", f"Error checking if database exists: {err}")
-            cursor.close()  # Ensure cursor is closed even on error
-            return True  # Assume it exists to prevent further errors
+            cursor.close()
+            return True
 
     def collect_table_info(self, db_type):
         if db_type == "simple":
@@ -61,7 +61,7 @@ class DatabaseSchemaApp:
             while table_num <= 0 or table_num > 5:
                 table_num = simpledialog.askinteger("Input",
                                                     "Invalid input. Please enter a positive integer, maximum 5.")
-        else:  # complex
+        else:
             table_num = simpledialog.askinteger("Input", "Enter the number of tables in the database (at least 5).")
             while table_num < 5:
                 table_num = simpledialog.askinteger("Input",
@@ -76,8 +76,8 @@ class DatabaseSchemaApp:
             columns = {}
             for j in range(column_num):
                 column_info = self.collect_column_info(table_name)
-                column_name, data_type, primary_key = column_info[:3]  # Only take the first three values
-                if column_info[3].lower() == 'yes':  # If it's a foreign key
+                column_name, data_type, primary_key = column_info[:3]
+                if column_info[3].lower() == 'yes':
                     _, _, _, _, foreign_table, foreign_column = column_info
                     columns[column_name] = (data_type, primary_key, 'yes', foreign_table, foreign_column)
                 else:
@@ -94,21 +94,21 @@ class DatabaseSchemaApp:
                     self.setup_logging(self.db_name)
                     if not self.check_database_exists(self.db_name):
                         self.table_info = {}
-                        self.collect_table_info(self.database_type.lower())  # Pass the database type to the method
+                        self.collect_table_info(self.database_type.lower())
                         self.save_to_file()
                         messagebox.showinfo("Success", "Database schema saved successfully.")
-                        self.app_running = False  # Set flag to False to exit the loop
+                        self.app_running = False
                     else:
                         messagebox.showerror("Error",
                                              f"Database '{self.db_name}' already exists. Please enter a different name.")
                 else:
                     messagebox.showerror("Error", "No database name provided.")
-                    self.app_running = False  # Exit if no name is provided
+                    self.app_running = False
             else:
                 messagebox.showerror("Error", "Invalid input. Please enter either 'Simple' or 'Complex'.")
-                self.app_running = False  # Exit on invalid database type
+                self.app_running = False
 
-        self.root.destroy()  # Close the application window
+        self.root.destroy()
 
     def collect_column_info(self, table_name):
         column_name = simpledialog.askstring("Input", f"Enter the name for column of table {table_name}.")
@@ -121,7 +121,7 @@ class DatabaseSchemaApp:
         while primary_key.lower() not in ['yes', 'no']:
             primary_key = simpledialog.askstring("Input", "Please enter either 'Yes' or 'No'.")
 
-        # New code to handle foreign keys
+
         is_foreign_key = simpledialog.askstring("Input", f"Is column {column_name} a foreign key? Yes or No.")
         foreign_table = foreign_column = None
         if is_foreign_key.lower() == 'yes':
@@ -144,7 +144,7 @@ class DatabaseSchemaApp:
         # Call backend process
         status_message = process_json_files(directory, self.db_name)
         messagebox.showinfo("Backend Status", status_message)
-        self.root.destroy()  # Close the GUI after the backend process is complete
+        self.root.destroy()
 
 
 # Main window
